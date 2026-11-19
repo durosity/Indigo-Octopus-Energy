@@ -53,6 +53,17 @@ Bring your Octopus Energy (UK) account into Indigo: live tariff rates, smart met
 2. Unzip it and double-click `OctopusEnergy.indigoPlugin`
 3. Indigo will install the plugin and offer to enable it
 
+### Upgrading from 2.2.18 or earlier
+
+Version 2.2.19 changed the plugin ID from `com.indigodomo.octopusenergy` to `com.durosity.indigo.octopusenergy`. Indigo treats this as a new plugin, so existing devices, triggers and plugin settings do not carry over:
+
+1. Note any triggers, control pages and scripts that use the Octopus devices
+2. Disable the old plugin, then rename or delete its devices (device names must be unique)
+3. Install the new version, enter your API key and set up your devices again as described below
+4. Point your triggers, control pages and scripts at the new devices
+
+To keep your plugin settings, quit Indigo or keep the new plugin disabled and copy `com.indigodomo.octopusenergy.indiPref` to `com.durosity.indigo.octopusenergy.indiPref` in Indigo's `Preferences/Plugins` folder before first enabling it.
+
 ## Getting your API key
 
 1. Log into your Octopus account in a browser

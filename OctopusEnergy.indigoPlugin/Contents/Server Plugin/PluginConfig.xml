@@ -24,7 +24,7 @@ After entering your API key and saving, create an Account device which will auto
     <Field id="separator2" type="separator"/>
     
     <Field id="aboutLabel" type="label" fontSize="small">
-        <Label>Octopus Energy Plugin for Indigo v2.2.18
+        <Label>Octopus Energy Plugin for Indigo v2.2.19
 Comprehensive energy management with REST and GraphQL APIs
 
 Core Features:

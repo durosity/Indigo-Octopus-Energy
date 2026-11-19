@@ -3510,7 +3510,7 @@ class Plugin(indigo.PluginBase):
                     address=f"{parent_serial}-M{months_prior}",
                     name=device_name,
                     description=f"{fuel_type} historic data for {target_date.strftime('%B %Y')}",
-                    pluginId="com.indigodomo.octopusenergy",
+                    pluginId=self.pluginId,
                     deviceTypeId=historic_type,
                     props=props
                 )
