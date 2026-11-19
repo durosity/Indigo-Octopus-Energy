@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<PluginConfig>
+    <Field id="apiKey" type="textfield">
+        <Label>API Key:</Label>
+        <Description>Your Octopus Energy API key</Description>
+    </Field>
+    
+    <Field id="hasHomeMini" type="checkbox" defaultValue="false">
+        <Label>I have an Octopus Home Mini:</Label>
+        <Description>Enable to fetch live "today" usage and cost (and live demand) from your Home Mini every 5 minutes. Requires an Account device.</Description>
+    </Field>
+    <Field id="apiKeyHelpLabel" type="label" fontSize="small" alignWithControl="true">
+        <Label>Find your API key at: https://octopus.energy/dashboard/new/accounts/personal-details/api-access
+After entering your API key and saving, create an Account device which will auto-discover your account details.</Label>
+    </Field>
+    
+    <Field id="separator1" type="separator"/>
+    
+    <Field id="showDebugInfo" type="checkbox" defaultValue="false">
+        <Label>Enable debug logging</Label>
+        <Description>Log detailed information (may be verbose)</Description>
+    </Field>
+    
+    <Field id="separator2" type="separator"/>
+    
+    <Field id="aboutLabel" type="label" fontSize="small">
+        <Label>Octopus Energy Plugin for Indigo v2.2.18
+Comprehensive energy management with REST and GraphQL APIs
+
+Core Features:
+• Real-time electricity and gas consumption tracking
+• Live tariff rate monitoring with automatic change detection
+• Historical data tracking (day-by-day monthly consumption)
+• Cheap rate period detection for EV charging automation
+• Export meter support for solar generation
+• Dual-register meter support (Economy 7, Intelligent Go)
+
+GraphQL Features (requires email/password):
+• Account balance and payment information
+• Saving Sessions (free electricity events) tracking
+• Automatic triggers for session start/end
+• Intelligent Octopus EV charging schedules (coming soon)
+
+Automation:
+• 13 triggers for comprehensive home automation
+• Saving Sessions integration for consumption reduction
+• Rate-based EV charging control
+
+Visit: https://developer.octopus.energy/</Label>
+    </Field>
+</PluginConfig>

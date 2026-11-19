@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<Actions>
+    <!-- Discover & Create Meters Action - THE KEY ACTION -->
+    <Action id="discoverAndCreateMeters" deviceFilter="self.accountDevice">
+        <Name>Discover &amp; Create Meters</Name>
+        <ConfigUI>
+            <Field id="instructionsLabel" type="label">
+                <Label>This will query your Octopus account and automatically create meter devices with all details pre-filled (MPAN, serial numbers, tariff codes, rates, etc.).
+
+All discovered meters will be created as enabled devices, ready to use immediately.</Label>
+            </Field>
+            <Field id="separator1" type="separator"/>
+            <Field id="cheapRateThreshold" type="textfield" defaultValue="10.0">
+                <Label>Default Cheap Rate Threshold (p/kWh):</Label>
+                <Description>For electricity meters - adjust per meter later if needed</Description>
+            </Field>
+            <Field id="thresholdHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Typical: 7.5-8p for Octopus Go, 10-12p for Agile. You can change this in each meter's settings after creation.</Label>
+            </Field>
+        </ConfigUI>
+        <CallbackMethod>discoverAndCreateMeters</CallbackMethod>
+    </Action>
+
+    <!-- Refresh Rates Action -->
+    <Action id="refreshRates" deviceFilter="self.electricityMeter">
+        <Name>Refresh Rates Now</Name>
+        <ConfigUI>
+            <Field id="instructionsLabel" type="label">
+                <Label>Force an immediate update of tariff rates for this meter.</Label>
+            </Field>
+        </ConfigUI>
+        <CallbackMethod>refreshRatesAction</CallbackMethod>
+    </Action>
+
+    <!-- Refresh Consumption Action -->
+    <Action id="refreshConsumption" deviceFilter="self">
+        <Name>Refresh Consumption Now</Name>
+        <ConfigUI>
+            <Field id="instructionsLabel" type="label">
+                <Label>Force an immediate update of consumption data for this device.</Label>
+            </Field>
+        </ConfigUI>
+        <CallbackMethod>refreshConsumptionAction</CallbackMethod>
+    </Action>
+</Actions>

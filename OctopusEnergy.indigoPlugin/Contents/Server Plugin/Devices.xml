@@ -1,0 +1,1817 @@
+<?xml version="1.0"?>
+<Devices>
+    <!-- Account Device -->
+    <Device type="custom" id="accountDevice">
+        <Name>Octopus Account</Name>
+        <ConfigUI>
+            <Field id="instructionsLabel1" type="label" fontSize="regular">
+                <Label>STEP 1: Discover or Enter Your Account Number</Label>
+            </Field>
+            
+            <Field id="discoverButton" type="button">
+                <Label/>
+                <Title>Auto-Discover Account (may fail with 403)</Title>
+                <CallbackMethod>discoverAccount</CallbackMethod>
+            </Field>
+            
+            <Field id="accountNumber" type="textfield">
+                <Label>Account Number:</Label>
+                <Description>Auto-filled or enter manually (format: A-XXXXXXXX)</Description>
+            </Field>
+            
+            <Field id="helpLabel1" type="label" fontSize="small" alignWithControl="true">
+                <Label>If auto-discovery fails with 403 error, find your account number at https://octopus.energy/dashboard/ and enter it above.</Label>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="instructionsLabel2" type="label" fontSize="regular">
+                <Label>STEP 2: Create Your Meter Devices</Label>
+            </Field>
+            
+            <Field id="cheapRateThreshold" type="textfield" defaultValue="10.0">
+                <Label>Default Cheap Rate Threshold (p/kWh):</Label>
+                <Description>For EV charging triggers (Agile: 10-12p, Go: 7.5-8p)</Description>
+            </Field>
+            
+            <Field id="createMetersButton" type="button">
+                <Label/>
+                <Title>Discover &amp; Create All Meters</Title>
+                <CallbackMethod>discoverAndCreateMetersButton</CallbackMethod>
+            </Field>
+            
+            <Field id="helpLabel2" type="label" fontSize="small" alignWithControl="true">
+                <Label>This will automatically create all your meter devices (electricity, gas, export) with MPANs, serial numbers, product codes, and tariff codes pre-filled. Existing meters won't be duplicated.</Label>
+            </Field>
+            
+            <Field id="separator2" type="separator"/>
+            
+            <Field id="instructionsLabel3" type="label" fontSize="regular">
+                <Label>STEP 3: GraphQL Features (Automatic)</Label>
+            </Field>
+            
+            <Field id="helpLabel3" type="label" fontSize="small">
+                <Label>GraphQL features (account balance, payment info, Saving Sessions, Intelligent Octopus EV charging) now use your API key from the plugin configuration - no separate login required.
+
+If your API key is set in the plugin config, these features are enabled automatically.</Label>
+            </Field>
+            
+            <!-- Legacy fields retained as hidden so existing device configs don't error.
+                 No longer used: GraphQL auth now uses the API key from pluginPrefs. -->
+            <Field id="email" type="textfield" hidden="true">
+                <Label>Email (legacy, no longer used):</Label>
+            </Field>
+            
+            <Field id="password" type="textfield" password="true" hidden="true">
+                <Label>Password (legacy, no longer used):</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="accountNumber">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Account Number</TriggerLabel>
+                <ControlPageLabel>Account</ControlPageLabel>
+            </State>
+            <State id="accountBalance">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Account Balance</TriggerLabel>
+                <ControlPageLabel>Balance</ControlPageLabel>
+            </State>
+            <State id="paymentMethod">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Payment Method</TriggerLabel>
+                <ControlPageLabel>Payment</ControlPageLabel>
+            </State>
+            <State id="nextPaymentDate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Next Payment Date</TriggerLabel>
+                <ControlPageLabel>Next Payment</ControlPageLabel>
+            </State>
+            <State id="nextPaymentAmount">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Next Payment Amount</TriggerLabel>
+                <ControlPageLabel>Payment Amount</ControlPageLabel>
+            </State>
+            <State id="meterCount">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Meter Count</TriggerLabel>
+                <ControlPageLabel>Meters</ControlPageLabel>
+            </State>
+            <State id="savingSessionActive">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Saving Session Active</TriggerLabel>
+                <ControlPageLabel>Session Active</ControlPageLabel>
+            </State>
+            <State id="savingSessionStart">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Session Start Time</TriggerLabel>
+                <ControlPageLabel>Session Start</ControlPageLabel>
+            </State>
+            <State id="savingSessionEnd">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Session End Time</TriggerLabel>
+                <ControlPageLabel>Session End</ControlPageLabel>
+            </State>
+            <State id="savingSessionReward">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Session Reward (p/kWh)</TriggerLabel>
+                <ControlPageLabel>Reward</ControlPageLabel>
+            </State>
+            <State id="nextSavingSession">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Next Saving Session</TriggerLabel>
+                <ControlPageLabel>Next Session</ControlPageLabel>
+            </State>
+            <State id="savingSessionsCount">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Upcoming Sessions Count</TriggerLabel>
+                <ControlPageLabel>Sessions</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>accountBalance</UiDisplayStateId>
+    </Device>
+
+    <!-- Electricity Meter Device -->
+    <Device type="custom" id="electricityMeter">
+        <Name>Electricity Meter</Name>
+        <ConfigUI>
+            <Field id="autoCreatedLabel" type="label" fontSize="small" alwaysUseInDialogHeightCalc="true" visibleBindingId="autoCreated" visibleBindingValue="true">
+                <Label>This device was automatically created with details from your Octopus account. All fields have been populated from the API.</Label>
+            </Field>
+            
+            <Field id="mpanMprn" type="textfield">
+                <Label>MPAN:</Label>
+                <Description>Meter Point Administration Number (13 digits)</Description>
+            </Field>
+            <Field id="serialNumber" type="textfield">
+                <Label>Serial Number:</Label>
+                <Description>Your electricity meter serial number</Description>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="productCode" type="textfield">
+                <Label>Product Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffCode" type="textfield">
+                <Label>Tariff Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>These codes are automatically populated from your Octopus account.</Label>
+            </Field>
+            
+            <Field id="separator2" type="separator"/>
+            
+            <Field id="cheapRateThreshold" type="textfield" defaultValue="10.0">
+                <Label>Cheap Rate Threshold (p/kWh):</Label>
+                <Description>Rates below this trigger "cheap period" events for EV charging</Description>
+            </Field>
+            <Field id="thresholdHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Set this to your preferred rate for EV charging. Typical values: 5-15p/kWh for Agile, 7.5p for Intelligent Go.</Label>
+            </Field>
+            
+            <Field id="separator3" type="separator"/>
+            
+            <Field id="historicLabel" type="label" fontSize="regular">
+                <Label>Historic Month Devices</Label>
+            </Field>
+            
+            <Field id="historicNameTemplate" type="textfield" defaultValue="• Misc - Octopus Electric History %B %Y">
+                <Label>Name Template:</Label>
+                <Description>Use %B for month name, %Y for year, %m for month number</Description>
+            </Field>
+            
+            <Field id="historicMonthCount" type="textfield" defaultValue="6">
+                <Label>Number of Months:</Label>
+                <Description>How many historic month devices to create (0-24)</Description>
+            </Field>
+            
+            <Field id="createHistoricButton" type="button">
+                <Label></Label>
+                <Title>Create Historic Devices</Title>
+                <CallbackMethod>createHistoricDevicesButton</CallbackMethod>
+            </Field>
+            
+            <Field id="historicHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Creates historic devices with day-by-day data. Each device has 62 states (day01cost-day31cost, day01kWh-day31kWh) for building graphs and control pages.</Label>
+            </Field>
+            
+            <Field id="autoCreated" type="checkbox" hidden="true" defaultValue="false">
+                <Label>Auto Created</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="currentRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Rate</TriggerLabel>
+                <ControlPageLabel>Rate</ControlPageLabel>
+            </State>
+            <State id="nextRateChange">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Next Rate Change</TriggerLabel>
+                <ControlPageLabel>Next Change</ControlPageLabel>
+            </State>
+            <State id="nextRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Next Rate</TriggerLabel>
+                <ControlPageLabel>Next Rate</ControlPageLabel>
+            </State>
+            <State id="inCheapPeriod">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>In Cheap Period</TriggerLabel>
+                <ControlPageLabel>Cheap Period</ControlPageLabel>
+            </State>
+            <State id="cheapPeriodStart">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Cheap Period Start</TriggerLabel>
+                <ControlPageLabel>Cheap Start</ControlPageLabel>
+            </State>
+            <State id="cheapPeriodEnd">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Cheap Period End</TriggerLabel>
+                <ControlPageLabel>Cheap End</ControlPageLabel>
+            </State>
+            <State id="isDualRate">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Is Dual Rate Tariff</TriggerLabel>
+                <ControlPageLabel>Dual Rate</ControlPageLabel>
+            </State>
+            <State id="currentPeriod">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Current Period</TriggerLabel>
+                <ControlPageLabel>Period</ControlPageLabel>
+            </State>
+            <State id="dayRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day Rate</TriggerLabel>
+                <ControlPageLabel>Day Rate</ControlPageLabel>
+            </State>
+            <State id="nightRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Night Rate</TriggerLabel>
+                <ControlPageLabel>Night Rate</ControlPageLabel>
+            </State>
+            <State id="isNegativeRate">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Is Negative Rate</TriggerLabel>
+                <ControlPageLabel>Negative Rate</ControlPageLabel>
+            </State>
+            <State id="currentConsumption">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Consumption</TriggerLabel>
+                <ControlPageLabel>Current</ControlPageLabel>
+            </State>
+            <State id="costToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today</TriggerLabel>
+                <ControlPageLabel>Cost Today</ControlPageLabel>
+            </State>
+            <State id="kWhToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Today</TriggerLabel>
+                <ControlPageLabel>kWh Today</ControlPageLabel>
+            </State>
+            <State id="liveDemand">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Live Demand (W)</TriggerLabel>
+                <ControlPageLabel>Live Demand</ControlPageLabel>
+            </State>
+            <State id="homeMiniDeviceId">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Home Mini Device ID</TriggerLabel>
+                <ControlPageLabel>Home Mini Device ID</ControlPageLabel>
+            </State>
+            <State id="homeMiniLastReading">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Home Mini Last Reading</TriggerLabel>
+                <ControlPageLabel>Last Live Reading</ControlPageLabel>
+            </State>
+            <State id="costYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday</TriggerLabel>
+                <ControlPageLabel>Cost Yesterday</ControlPageLabel>
+            </State>
+            <State id="kWhYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Yesterday</TriggerLabel>
+                <ControlPageLabel>kWh Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date</TriggerLabel>
+                <ControlPageLabel>Cost MTD</ControlPageLabel>
+            </State>
+            <State id="costTodayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Today</ControlPageLabel>
+            </State>
+            <State id="costYesterdayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDateWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total MTD</ControlPageLabel>
+            </State>
+            <State id="kWhMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Month To Date</TriggerLabel>
+                <ControlPageLabel>kWh MTD</ControlPageLabel>
+            </State>
+            <State id="todayTotal">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Total (Legacy)</TriggerLabel>
+                <ControlPageLabel>Today</ControlPageLabel>
+            </State>
+            <State id="todayCost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Cost (Legacy)</TriggerLabel>
+                <ControlPageLabel>Cost</ControlPageLabel>
+            </State>
+            <State id="standingCharge">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Standing Charge</TriggerLabel>
+                <ControlPageLabel>Standing</ControlPageLabel>
+            </State>
+            <State id="currentTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Current Tariff</TriggerLabel>
+                <ControlPageLabel>Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffValidFrom">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid From</TriggerLabel>
+                <ControlPageLabel>Valid From</ControlPageLabel>
+            </State>
+            <State id="tariffValidTo">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid To</TriggerLabel>
+                <ControlPageLabel>Valid To</ControlPageLabel>
+            </State>
+            <State id="tariffEndingSoon">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Ending Soon</TriggerLabel>
+                <ControlPageLabel>Ending Soon</ControlPageLabel>
+            </State>
+            <State id="upcomingTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Upcoming Tariff</TriggerLabel>
+                <ControlPageLabel>Next Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffChanged">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Changed</TriggerLabel>
+                <ControlPageLabel>Changed</ControlPageLabel>
+            </State>
+            <State id="previousTariffCode">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Previous Tariff Code</TriggerLabel>
+                <ControlPageLabel>Previous Tariff</ControlPageLabel>
+            </State>
+            <State id="previousProductCode">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Previous Product Code</TriggerLabel>
+                <ControlPageLabel>Previous Product</ControlPageLabel>
+            </State>
+            <State id="tariffChangeDate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Change Date</TriggerLabel>
+                <ControlPageLabel>Change Date</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>costYesterdayWithStanding</UiDisplayStateId>
+    </Device>
+
+    <!-- Gas Meter Device -->
+    <Device type="custom" id="gasMeter">
+        <Name>Gas Meter</Name>
+        <ConfigUI>
+            <Field id="autoCreatedLabel" type="label" fontSize="small" alwaysUseInDialogHeightCalc="true" visibleBindingId="autoCreated" visibleBindingValue="true">
+                <Label>This device was automatically created with details from your Octopus account.</Label>
+            </Field>
+            
+            <Field id="mpanMprn" type="textfield">
+                <Label>MPRN:</Label>
+                <Description>Meter Point Reference Number</Description>
+            </Field>
+            <Field id="serialNumber" type="textfield">
+                <Label>Serial Number:</Label>
+                <Description>Your gas meter serial number</Description>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="productCode" type="textfield">
+                <Label>Product Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffCode" type="textfield">
+                <Label>Tariff Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            
+            <Field id="separator2" type="separator"/>
+            
+            <Field id="meterType" type="menu" defaultValue="auto">
+                <Label>Meter Type:</Label>
+                <List>
+                    <Option value="auto">Auto-Detect (Recommended)</Option>
+                    <Option value="smets1">SMETS1 (Data in kWh)</Option>
+                    <Option value="smets2">SMETS2 (Data in m³)</Option>
+                </List>
+            </Field>
+            
+            <Field id="calorificValue" type="textfield" defaultValue="40.0">
+                <Label>Calorific Value:</Label>
+                <Description>For SMETS2 meters - find on your bill (typically 38-40 MJ/m³)</Description>
+            </Field>
+            
+            <Field id="gasHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>SMETS1 meters report in kWh, SMETS2 in m³. Auto-detect will determine this automatically. Only change if you see incorrect gas consumption values.</Label>
+            </Field>
+            
+            <Field id="separator3" type="separator"/>
+            
+            <Field id="historicLabel" type="label" fontSize="regular">
+                <Label>Historic Month Devices</Label>
+            </Field>
+            
+            <Field id="historicNameTemplate" type="textfield" defaultValue="• Misc - Octopus Gas History %B %Y">
+                <Label>Name Template:</Label>
+                <Description>Use %B for month name, %Y for year, %m for month number</Description>
+            </Field>
+            
+            <Field id="historicMonthCount" type="textfield" defaultValue="6">
+                <Label>Number of Months:</Label>
+                <Description>How many historic month devices to create (0-24)</Description>
+            </Field>
+            
+            <Field id="createHistoricButton" type="button">
+                <Label></Label>
+                <Title>Create Historic Devices</Title>
+                <CallbackMethod>createHistoricDevicesButton</CallbackMethod>
+            </Field>
+            
+            <Field id="historicHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Creates historic devices with day-by-day data. Each device has 62 states (day01cost-day31cost, day01kWh-day31kWh) for building graphs and control pages.</Label>
+            </Field>
+            
+            <Field id="autoCreated" type="checkbox" hidden="true" defaultValue="false">
+                <Label>Auto Created</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="meterTypeDetected">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Meter Type Detected</TriggerLabel>
+                <ControlPageLabel>Meter Type</ControlPageLabel>
+            </State>
+            <State id="currentRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Rate</TriggerLabel>
+                <ControlPageLabel>Rate</ControlPageLabel>
+            </State>
+            <State id="currentConsumption">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Consumption</TriggerLabel>
+                <ControlPageLabel>Current</ControlPageLabel>
+            </State>
+            <State id="costToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today</TriggerLabel>
+                <ControlPageLabel>Cost Today</ControlPageLabel>
+            </State>
+            <State id="kWhToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Today</TriggerLabel>
+                <ControlPageLabel>kWh Today</ControlPageLabel>
+            </State>
+            <State id="homeMiniDeviceId">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Home Mini Device ID</TriggerLabel>
+                <ControlPageLabel>Home Mini Device ID</ControlPageLabel>
+            </State>
+            <State id="homeMiniLastReading">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Home Mini Last Reading</TriggerLabel>
+                <ControlPageLabel>Last Live Reading</ControlPageLabel>
+            </State>
+            <State id="costYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday</TriggerLabel>
+                <ControlPageLabel>Cost Yesterday</ControlPageLabel>
+            </State>
+            <State id="kWhYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Yesterday</TriggerLabel>
+                <ControlPageLabel>kWh Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date</TriggerLabel>
+                <ControlPageLabel>Cost MTD</ControlPageLabel>
+            </State>
+            <State id="costTodayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Today</ControlPageLabel>
+            </State>
+            <State id="costYesterdayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDateWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total MTD</ControlPageLabel>
+            </State>
+            <State id="kWhMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Month To Date</TriggerLabel>
+                <ControlPageLabel>kWh MTD</ControlPageLabel>
+            </State>
+            <State id="todayTotal">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Total (Legacy)</TriggerLabel>
+                <ControlPageLabel>Today</ControlPageLabel>
+            </State>
+            <State id="todayCost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Cost (Legacy)</TriggerLabel>
+                <ControlPageLabel>Cost</ControlPageLabel>
+            </State>
+            <State id="standingCharge">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Standing Charge</TriggerLabel>
+                <ControlPageLabel>Standing</ControlPageLabel>
+            </State>
+            <State id="currentTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Current Tariff</TriggerLabel>
+                <ControlPageLabel>Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffValidFrom">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid From</TriggerLabel>
+                <ControlPageLabel>Valid From</ControlPageLabel>
+            </State>
+            <State id="tariffValidTo">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid To</TriggerLabel>
+                <ControlPageLabel>Valid To</ControlPageLabel>
+            </State>
+            <State id="tariffEndingSoon">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Ending Soon</TriggerLabel>
+                <ControlPageLabel>Ending Soon</ControlPageLabel>
+            </State>
+            <State id="upcomingTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Upcoming Tariff</TriggerLabel>
+                <ControlPageLabel>Next Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffChanged">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Changed</TriggerLabel>
+                <ControlPageLabel>Changed</ControlPageLabel>
+            </State>
+            <State id="previousTariffCode">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Previous Tariff Code</TriggerLabel>
+                <ControlPageLabel>Previous Tariff</ControlPageLabel>
+            </State>
+            <State id="previousProductCode">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Previous Product Code</TriggerLabel>
+                <ControlPageLabel>Previous Product</ControlPageLabel>
+            </State>
+            <State id="tariffChangeDate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Change Date</TriggerLabel>
+                <ControlPageLabel>Change Date</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>costYesterdayWithStanding</UiDisplayStateId>
+    </Device>
+
+    <!-- Export Meter Device (for future solar) -->
+    <Device type="custom" id="exportMeter">
+        <Name>Export Meter</Name>
+        <ConfigUI>
+            <Field id="autoCreatedLabel" type="label" fontSize="small" alwaysUseInDialogHeightCalc="true" visibleBindingId="autoCreated" visibleBindingValue="true">
+                <Label>This device was automatically created for solar export tracking.</Label>
+            </Field>
+            
+            <Field id="mpanMprn" type="textfield">
+                <Label>Export MPAN:</Label>
+                <Description>Meter Point Administration Number for export</Description>
+            </Field>
+            <Field id="serialNumber" type="textfield">
+                <Label>Serial Number:</Label>
+                <Description>Your export meter serial number</Description>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="productCode" type="textfield">
+                <Label>Product Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffCode" type="textfield">
+                <Label>Tariff Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="exportHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Export meters have different MPANs than import meters.</Label>
+            </Field>
+            
+            <Field id="separator2" type="separator"/>
+            
+            <Field id="historicLabel" type="label" fontSize="regular">
+                <Label>Historic Month Devices</Label>
+            </Field>
+            
+            <Field id="historicNameTemplate" type="textfield" defaultValue="• Misc - Octopus Export History %B %Y">
+                <Label>Name Template:</Label>
+                <Description>Use %B for month name, %Y for year, %m for month number</Description>
+            </Field>
+            
+            <Field id="historicMonthCount" type="textfield" defaultValue="6">
+                <Label>Number of Months:</Label>
+                <Description>How many historic month devices to create (0-24)</Description>
+            </Field>
+            
+            <Field id="createHistoricButton" type="button">
+                <Label></Label>
+                <Title>Create Historic Devices</Title>
+                <CallbackMethod>createHistoricDevicesButton</CallbackMethod>
+            </Field>
+            
+            <Field id="historicHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Creates historic devices with day-by-day export data. Each device has 62 states (day01cost-day31cost, day01kWh-day31kWh) for building graphs and control pages.</Label>
+            </Field>
+            
+            <Field id="autoCreated" type="checkbox" hidden="true" defaultValue="false">
+                <Label>Auto Created</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="currentRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Export Rate</TriggerLabel>
+                <ControlPageLabel>Rate</ControlPageLabel>
+            </State>
+            <State id="currentExport">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Export</TriggerLabel>
+                <ControlPageLabel>Current</ControlPageLabel>
+            </State>
+            <State id="todayTotal">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Export</TriggerLabel>
+                <ControlPageLabel>Today</ControlPageLabel>
+            </State>
+            <State id="todayEarnings">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Earnings</TriggerLabel>
+                <ControlPageLabel>Earnings</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>currentRate</UiDisplayStateId>
+    </Device>
+
+    <!-- Electricity Meter Historic Device -->
+    <Device type="custom" id="electricityMeterHistoric">
+        <Name>Electricity Meter (Historic)</Name>
+        <ConfigUI>
+            <Field id="linkedMeterSerial" type="menu">
+                <Label>Linked Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter" method="getElectricityMeters"/>
+            </Field>
+            
+            <Field id="monthsPrior" type="textfield" defaultValue="1">
+                <Label>Months Prior:</Label>
+                <Description>0 = current month, 1 = last month, 2 = two months ago, etc.</Description>
+            </Field>
+            
+            <Field id="includeStandingCharge" type="checkbox" defaultValue="false">
+                <Label>Include Standing Charge:</Label>
+                <Description>Add daily standing charge to each day's cost (and total)</Description>
+            </Field>
+            
+            <Field id="helpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>This device shows day-by-day data for a specific month. States day01cost through day31cost contain daily costs, day01kWh through day31kWh contain daily consumption.</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="monthName">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Month Name</TriggerLabel>
+                <ControlPageLabel>Month</ControlPageLabel>
+            </State>
+            <State id="totalCost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Total Cost</TriggerLabel>
+                <ControlPageLabel>Total</ControlPageLabel>
+            </State>
+            <State id="totalKwh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Total kWh</TriggerLabel>
+                <ControlPageLabel>kWh</ControlPageLabel>
+            </State>
+            <State id="day01cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 01 Cost</TriggerLabel>
+                <ControlPageLabel>Day 01 £</ControlPageLabel>
+            </State>
+            <State id="day01kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 01 kWh</TriggerLabel>
+                <ControlPageLabel>Day 01 kWh</ControlPageLabel>
+            </State>
+            <State id="day02cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 02 Cost</TriggerLabel>
+                <ControlPageLabel>Day 02 £</ControlPageLabel>
+            </State>
+            <State id="day02kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 02 kWh</TriggerLabel>
+                <ControlPageLabel>Day 02 kWh</ControlPageLabel>
+            </State>
+            <State id="day03cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 03 Cost</TriggerLabel>
+                <ControlPageLabel>Day 03 £</ControlPageLabel>
+            </State>
+            <State id="day03kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 03 kWh</TriggerLabel>
+                <ControlPageLabel>Day 03 kWh</ControlPageLabel>
+            </State>
+            <State id="day04cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 04 Cost</TriggerLabel>
+                <ControlPageLabel>Day 04 £</ControlPageLabel>
+            </State>
+            <State id="day04kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 04 kWh</TriggerLabel>
+                <ControlPageLabel>Day 04 kWh</ControlPageLabel>
+            </State>
+            <State id="day05cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 05 Cost</TriggerLabel>
+                <ControlPageLabel>Day 05 £</ControlPageLabel>
+            </State>
+            <State id="day05kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 05 kWh</TriggerLabel>
+                <ControlPageLabel>Day 05 kWh</ControlPageLabel>
+            </State>
+            <State id="day06cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 06 Cost</TriggerLabel>
+                <ControlPageLabel>Day 06 £</ControlPageLabel>
+            </State>
+            <State id="day06kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 06 kWh</TriggerLabel>
+                <ControlPageLabel>Day 06 kWh</ControlPageLabel>
+            </State>
+            <State id="day07cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 07 Cost</TriggerLabel>
+                <ControlPageLabel>Day 07 £</ControlPageLabel>
+            </State>
+            <State id="day07kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 07 kWh</TriggerLabel>
+                <ControlPageLabel>Day 07 kWh</ControlPageLabel>
+            </State>
+            <State id="day08cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 08 Cost</TriggerLabel>
+                <ControlPageLabel>Day 08 £</ControlPageLabel>
+            </State>
+            <State id="day08kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 08 kWh</TriggerLabel>
+                <ControlPageLabel>Day 08 kWh</ControlPageLabel>
+            </State>
+            <State id="day09cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 09 Cost</TriggerLabel>
+                <ControlPageLabel>Day 09 £</ControlPageLabel>
+            </State>
+            <State id="day09kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 09 kWh</TriggerLabel>
+                <ControlPageLabel>Day 09 kWh</ControlPageLabel>
+            </State>
+            <State id="day10cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 10 Cost</TriggerLabel>
+                <ControlPageLabel>Day 10 £</ControlPageLabel>
+            </State>
+            <State id="day10kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 10 kWh</TriggerLabel>
+                <ControlPageLabel>Day 10 kWh</ControlPageLabel>
+            </State>
+            <State id="day11cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 11 Cost</TriggerLabel>
+                <ControlPageLabel>Day 11 £</ControlPageLabel>
+            </State>
+            <State id="day11kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 11 kWh</TriggerLabel>
+                <ControlPageLabel>Day 11 kWh</ControlPageLabel>
+            </State>
+            <State id="day12cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 12 Cost</TriggerLabel>
+                <ControlPageLabel>Day 12 £</ControlPageLabel>
+            </State>
+            <State id="day12kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 12 kWh</TriggerLabel>
+                <ControlPageLabel>Day 12 kWh</ControlPageLabel>
+            </State>
+            <State id="day13cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 13 Cost</TriggerLabel>
+                <ControlPageLabel>Day 13 £</ControlPageLabel>
+            </State>
+            <State id="day13kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 13 kWh</TriggerLabel>
+                <ControlPageLabel>Day 13 kWh</ControlPageLabel>
+            </State>
+            <State id="day14cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 14 Cost</TriggerLabel>
+                <ControlPageLabel>Day 14 £</ControlPageLabel>
+            </State>
+            <State id="day14kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 14 kWh</TriggerLabel>
+                <ControlPageLabel>Day 14 kWh</ControlPageLabel>
+            </State>
+            <State id="day15cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 15 Cost</TriggerLabel>
+                <ControlPageLabel>Day 15 £</ControlPageLabel>
+            </State>
+            <State id="day15kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 15 kWh</TriggerLabel>
+                <ControlPageLabel>Day 15 kWh</ControlPageLabel>
+            </State>
+            <State id="day16cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 16 Cost</TriggerLabel>
+                <ControlPageLabel>Day 16 £</ControlPageLabel>
+            </State>
+            <State id="day16kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 16 kWh</TriggerLabel>
+                <ControlPageLabel>Day 16 kWh</ControlPageLabel>
+            </State>
+            <State id="day17cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 17 Cost</TriggerLabel>
+                <ControlPageLabel>Day 17 £</ControlPageLabel>
+            </State>
+            <State id="day17kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 17 kWh</TriggerLabel>
+                <ControlPageLabel>Day 17 kWh</ControlPageLabel>
+            </State>
+            <State id="day18cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 18 Cost</TriggerLabel>
+                <ControlPageLabel>Day 18 £</ControlPageLabel>
+            </State>
+            <State id="day18kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 18 kWh</TriggerLabel>
+                <ControlPageLabel>Day 18 kWh</ControlPageLabel>
+            </State>
+            <State id="day19cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 19 Cost</TriggerLabel>
+                <ControlPageLabel>Day 19 £</ControlPageLabel>
+            </State>
+            <State id="day19kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 19 kWh</TriggerLabel>
+                <ControlPageLabel>Day 19 kWh</ControlPageLabel>
+            </State>
+            <State id="day20cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 20 Cost</TriggerLabel>
+                <ControlPageLabel>Day 20 £</ControlPageLabel>
+            </State>
+            <State id="day20kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 20 kWh</TriggerLabel>
+                <ControlPageLabel>Day 20 kWh</ControlPageLabel>
+            </State>
+            <State id="day21cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 21 Cost</TriggerLabel>
+                <ControlPageLabel>Day 21 £</ControlPageLabel>
+            </State>
+            <State id="day21kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 21 kWh</TriggerLabel>
+                <ControlPageLabel>Day 21 kWh</ControlPageLabel>
+            </State>
+            <State id="day22cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 22 Cost</TriggerLabel>
+                <ControlPageLabel>Day 22 £</ControlPageLabel>
+            </State>
+            <State id="day22kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 22 kWh</TriggerLabel>
+                <ControlPageLabel>Day 22 kWh</ControlPageLabel>
+            </State>
+            <State id="day23cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 23 Cost</TriggerLabel>
+                <ControlPageLabel>Day 23 £</ControlPageLabel>
+            </State>
+            <State id="day23kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 23 kWh</TriggerLabel>
+                <ControlPageLabel>Day 23 kWh</ControlPageLabel>
+            </State>
+            <State id="day24cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 24 Cost</TriggerLabel>
+                <ControlPageLabel>Day 24 £</ControlPageLabel>
+            </State>
+            <State id="day24kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 24 kWh</TriggerLabel>
+                <ControlPageLabel>Day 24 kWh</ControlPageLabel>
+            </State>
+            <State id="day25cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 25 Cost</TriggerLabel>
+                <ControlPageLabel>Day 25 £</ControlPageLabel>
+            </State>
+            <State id="day25kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 25 kWh</TriggerLabel>
+                <ControlPageLabel>Day 25 kWh</ControlPageLabel>
+            </State>
+            <State id="day26cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 26 Cost</TriggerLabel>
+                <ControlPageLabel>Day 26 £</ControlPageLabel>
+            </State>
+            <State id="day26kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 26 kWh</TriggerLabel>
+                <ControlPageLabel>Day 26 kWh</ControlPageLabel>
+            </State>
+            <State id="day27cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 27 Cost</TriggerLabel>
+                <ControlPageLabel>Day 27 £</ControlPageLabel>
+            </State>
+            <State id="day27kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 27 kWh</TriggerLabel>
+                <ControlPageLabel>Day 27 kWh</ControlPageLabel>
+            </State>
+            <State id="day28cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 28 Cost</TriggerLabel>
+                <ControlPageLabel>Day 28 £</ControlPageLabel>
+            </State>
+            <State id="day28kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 28 kWh</TriggerLabel>
+                <ControlPageLabel>Day 28 kWh</ControlPageLabel>
+            </State>
+            <State id="day29cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 29 Cost</TriggerLabel>
+                <ControlPageLabel>Day 29 £</ControlPageLabel>
+            </State>
+            <State id="day29kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 29 kWh</TriggerLabel>
+                <ControlPageLabel>Day 29 kWh</ControlPageLabel>
+            </State>
+            <State id="day30cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 30 Cost</TriggerLabel>
+                <ControlPageLabel>Day 30 £</ControlPageLabel>
+            </State>
+            <State id="day30kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 30 kWh</TriggerLabel>
+                <ControlPageLabel>Day 30 kWh</ControlPageLabel>
+            </State>
+            <State id="day31cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 31 Cost</TriggerLabel>
+                <ControlPageLabel>Day 31 £</ControlPageLabel>
+            </State>
+            <State id="day31kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 31 kWh</TriggerLabel>
+                <ControlPageLabel>Day 31 kWh</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>totalCost</UiDisplayStateId>
+    </Device>
+
+    <!-- Gas Meter Historic Device -->
+    <Device type="custom" id="gasMeterHistoric">
+        <Name>Gas Meter (Historic)</Name>
+        <ConfigUI>
+            <Field id="linkedMeterSerial" type="menu">
+                <Label>Linked Gas Meter:</Label>
+                <List class="self" filter="gasMeter" method="getGasMeters"/>
+            </Field>
+            
+            <Field id="monthsPrior" type="textfield" defaultValue="1">
+                <Label>Months Prior:</Label>
+                <Description>0 = current month, 1 = last month, 2 = two months ago, etc.</Description>
+            </Field>
+            
+            <Field id="includeStandingCharge" type="checkbox" defaultValue="false">
+                <Label>Include Standing Charge:</Label>
+                <Description>Add daily standing charge to each day's cost (and total)</Description>
+            </Field>
+            
+            <Field id="helpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>This device shows day-by-day data for a specific month. States day01cost through day31cost contain daily costs, day01kWh through day31kWh contain daily consumption.</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="monthName">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Month Name</TriggerLabel>
+                <ControlPageLabel>Month</ControlPageLabel>
+            </State>
+            <State id="totalCost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Total Cost</TriggerLabel>
+                <ControlPageLabel>Total</ControlPageLabel>
+            </State>
+            <State id="totalKwh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Total kWh</TriggerLabel>
+                <ControlPageLabel>kWh</ControlPageLabel>
+            </State>
+            <State id="day01cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 01 Cost</TriggerLabel>
+                <ControlPageLabel>Day 01 £</ControlPageLabel>
+            </State>
+            <State id="day01kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 01 kWh</TriggerLabel>
+                <ControlPageLabel>Day 01 kWh</ControlPageLabel>
+            </State>
+            <State id="day02cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 02 Cost</TriggerLabel>
+                <ControlPageLabel>Day 02 £</ControlPageLabel>
+            </State>
+            <State id="day02kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 02 kWh</TriggerLabel>
+                <ControlPageLabel>Day 02 kWh</ControlPageLabel>
+            </State>
+            <State id="day03cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 03 Cost</TriggerLabel>
+                <ControlPageLabel>Day 03 £</ControlPageLabel>
+            </State>
+            <State id="day03kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 03 kWh</TriggerLabel>
+                <ControlPageLabel>Day 03 kWh</ControlPageLabel>
+            </State>
+            <State id="day04cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 04 Cost</TriggerLabel>
+                <ControlPageLabel>Day 04 £</ControlPageLabel>
+            </State>
+            <State id="day04kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 04 kWh</TriggerLabel>
+                <ControlPageLabel>Day 04 kWh</ControlPageLabel>
+            </State>
+            <State id="day05cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 05 Cost</TriggerLabel>
+                <ControlPageLabel>Day 05 £</ControlPageLabel>
+            </State>
+            <State id="day05kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 05 kWh</TriggerLabel>
+                <ControlPageLabel>Day 05 kWh</ControlPageLabel>
+            </State>
+            <State id="day06cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 06 Cost</TriggerLabel>
+                <ControlPageLabel>Day 06 £</ControlPageLabel>
+            </State>
+            <State id="day06kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 06 kWh</TriggerLabel>
+                <ControlPageLabel>Day 06 kWh</ControlPageLabel>
+            </State>
+            <State id="day07cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 07 Cost</TriggerLabel>
+                <ControlPageLabel>Day 07 £</ControlPageLabel>
+            </State>
+            <State id="day07kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 07 kWh</TriggerLabel>
+                <ControlPageLabel>Day 07 kWh</ControlPageLabel>
+            </State>
+            <State id="day08cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 08 Cost</TriggerLabel>
+                <ControlPageLabel>Day 08 £</ControlPageLabel>
+            </State>
+            <State id="day08kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 08 kWh</TriggerLabel>
+                <ControlPageLabel>Day 08 kWh</ControlPageLabel>
+            </State>
+            <State id="day09cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 09 Cost</TriggerLabel>
+                <ControlPageLabel>Day 09 £</ControlPageLabel>
+            </State>
+            <State id="day09kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 09 kWh</TriggerLabel>
+                <ControlPageLabel>Day 09 kWh</ControlPageLabel>
+            </State>
+            <State id="day10cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 10 Cost</TriggerLabel>
+                <ControlPageLabel>Day 10 £</ControlPageLabel>
+            </State>
+            <State id="day10kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 10 kWh</TriggerLabel>
+                <ControlPageLabel>Day 10 kWh</ControlPageLabel>
+            </State>
+            <State id="day11cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 11 Cost</TriggerLabel>
+                <ControlPageLabel>Day 11 £</ControlPageLabel>
+            </State>
+            <State id="day11kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 11 kWh</TriggerLabel>
+                <ControlPageLabel>Day 11 kWh</ControlPageLabel>
+            </State>
+            <State id="day12cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 12 Cost</TriggerLabel>
+                <ControlPageLabel>Day 12 £</ControlPageLabel>
+            </State>
+            <State id="day12kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 12 kWh</TriggerLabel>
+                <ControlPageLabel>Day 12 kWh</ControlPageLabel>
+            </State>
+            <State id="day13cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 13 Cost</TriggerLabel>
+                <ControlPageLabel>Day 13 £</ControlPageLabel>
+            </State>
+            <State id="day13kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 13 kWh</TriggerLabel>
+                <ControlPageLabel>Day 13 kWh</ControlPageLabel>
+            </State>
+            <State id="day14cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 14 Cost</TriggerLabel>
+                <ControlPageLabel>Day 14 £</ControlPageLabel>
+            </State>
+            <State id="day14kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 14 kWh</TriggerLabel>
+                <ControlPageLabel>Day 14 kWh</ControlPageLabel>
+            </State>
+            <State id="day15cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 15 Cost</TriggerLabel>
+                <ControlPageLabel>Day 15 £</ControlPageLabel>
+            </State>
+            <State id="day15kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 15 kWh</TriggerLabel>
+                <ControlPageLabel>Day 15 kWh</ControlPageLabel>
+            </State>
+            <State id="day16cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 16 Cost</TriggerLabel>
+                <ControlPageLabel>Day 16 £</ControlPageLabel>
+            </State>
+            <State id="day16kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 16 kWh</TriggerLabel>
+                <ControlPageLabel>Day 16 kWh</ControlPageLabel>
+            </State>
+            <State id="day17cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 17 Cost</TriggerLabel>
+                <ControlPageLabel>Day 17 £</ControlPageLabel>
+            </State>
+            <State id="day17kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 17 kWh</TriggerLabel>
+                <ControlPageLabel>Day 17 kWh</ControlPageLabel>
+            </State>
+            <State id="day18cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 18 Cost</TriggerLabel>
+                <ControlPageLabel>Day 18 £</ControlPageLabel>
+            </State>
+            <State id="day18kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 18 kWh</TriggerLabel>
+                <ControlPageLabel>Day 18 kWh</ControlPageLabel>
+            </State>
+            <State id="day19cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 19 Cost</TriggerLabel>
+                <ControlPageLabel>Day 19 £</ControlPageLabel>
+            </State>
+            <State id="day19kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 19 kWh</TriggerLabel>
+                <ControlPageLabel>Day 19 kWh</ControlPageLabel>
+            </State>
+            <State id="day20cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 20 Cost</TriggerLabel>
+                <ControlPageLabel>Day 20 £</ControlPageLabel>
+            </State>
+            <State id="day20kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 20 kWh</TriggerLabel>
+                <ControlPageLabel>Day 20 kWh</ControlPageLabel>
+            </State>
+            <State id="day21cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 21 Cost</TriggerLabel>
+                <ControlPageLabel>Day 21 £</ControlPageLabel>
+            </State>
+            <State id="day21kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 21 kWh</TriggerLabel>
+                <ControlPageLabel>Day 21 kWh</ControlPageLabel>
+            </State>
+            <State id="day22cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 22 Cost</TriggerLabel>
+                <ControlPageLabel>Day 22 £</ControlPageLabel>
+            </State>
+            <State id="day22kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 22 kWh</TriggerLabel>
+                <ControlPageLabel>Day 22 kWh</ControlPageLabel>
+            </State>
+            <State id="day23cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 23 Cost</TriggerLabel>
+                <ControlPageLabel>Day 23 £</ControlPageLabel>
+            </State>
+            <State id="day23kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 23 kWh</TriggerLabel>
+                <ControlPageLabel>Day 23 kWh</ControlPageLabel>
+            </State>
+            <State id="day24cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 24 Cost</TriggerLabel>
+                <ControlPageLabel>Day 24 £</ControlPageLabel>
+            </State>
+            <State id="day24kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 24 kWh</TriggerLabel>
+                <ControlPageLabel>Day 24 kWh</ControlPageLabel>
+            </State>
+            <State id="day25cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 25 Cost</TriggerLabel>
+                <ControlPageLabel>Day 25 £</ControlPageLabel>
+            </State>
+            <State id="day25kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 25 kWh</TriggerLabel>
+                <ControlPageLabel>Day 25 kWh</ControlPageLabel>
+            </State>
+            <State id="day26cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 26 Cost</TriggerLabel>
+                <ControlPageLabel>Day 26 £</ControlPageLabel>
+            </State>
+            <State id="day26kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 26 kWh</TriggerLabel>
+                <ControlPageLabel>Day 26 kWh</ControlPageLabel>
+            </State>
+            <State id="day27cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 27 Cost</TriggerLabel>
+                <ControlPageLabel>Day 27 £</ControlPageLabel>
+            </State>
+            <State id="day27kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 27 kWh</TriggerLabel>
+                <ControlPageLabel>Day 27 kWh</ControlPageLabel>
+            </State>
+            <State id="day28cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 28 Cost</TriggerLabel>
+                <ControlPageLabel>Day 28 £</ControlPageLabel>
+            </State>
+            <State id="day28kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 28 kWh</TriggerLabel>
+                <ControlPageLabel>Day 28 kWh</ControlPageLabel>
+            </State>
+            <State id="day29cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 29 Cost</TriggerLabel>
+                <ControlPageLabel>Day 29 £</ControlPageLabel>
+            </State>
+            <State id="day29kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 29 kWh</TriggerLabel>
+                <ControlPageLabel>Day 29 kWh</ControlPageLabel>
+            </State>
+            <State id="day30cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 30 Cost</TriggerLabel>
+                <ControlPageLabel>Day 30 £</ControlPageLabel>
+            </State>
+            <State id="day30kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 30 kWh</TriggerLabel>
+                <ControlPageLabel>Day 30 kWh</ControlPageLabel>
+            </State>
+            <State id="day31cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 31 Cost</TriggerLabel>
+                <ControlPageLabel>Day 31 £</ControlPageLabel>
+            </State>
+            <State id="day31kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 31 kWh</TriggerLabel>
+                <ControlPageLabel>Day 31 kWh</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>totalCost</UiDisplayStateId>
+    </Device>
+
+    <!-- Export Meter Historic Device -->
+    <Device type="custom" id="exportMeterHistoric">
+        <Name>Export Meter (Historic)</Name>
+        <ConfigUI>
+            <Field id="linkedMeterSerial" type="menu">
+                <Label>Linked Export Meter:</Label>
+                <List class="self" filter="exportMeter" method="getExportMeters"/>
+            </Field>
+            
+            <Field id="monthsPrior" type="textfield" defaultValue="1">
+                <Label>Months Prior:</Label>
+                <Description>0 = current month, 1 = last month, 2 = two months ago, etc.</Description>
+            </Field>
+            
+            <Field id="includeStandingCharge" type="checkbox" defaultValue="false">
+                <Label>Include Standing Charge:</Label>
+                <Description>Add daily standing charge to each day's cost (and total)</Description>
+            </Field>
+            
+            <Field id="helpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>This device shows day-by-day export data for a specific month. States day01cost through day31cost contain daily earnings, day01kWh through day31kWh contain daily export.</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="monthName">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Month Name</TriggerLabel>
+                <ControlPageLabel>Month</ControlPageLabel>
+            </State>
+            <State id="totalCost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Total Earnings</TriggerLabel>
+                <ControlPageLabel>Total</ControlPageLabel>
+            </State>
+            <State id="totalKwh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Total kWh</TriggerLabel>
+                <ControlPageLabel>kWh</ControlPageLabel>
+            </State>
+            <State id="day01cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 01 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 01 £</ControlPageLabel>
+            </State>
+            <State id="day01kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 01 kWh</TriggerLabel>
+                <ControlPageLabel>Day 01 kWh</ControlPageLabel>
+            </State>
+            <State id="day02cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 02 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 02 £</ControlPageLabel>
+            </State>
+            <State id="day02kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 02 kWh</TriggerLabel>
+                <ControlPageLabel>Day 02 kWh</ControlPageLabel>
+            </State>
+            <State id="day03cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 03 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 03 £</ControlPageLabel>
+            </State>
+            <State id="day03kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 03 kWh</TriggerLabel>
+                <ControlPageLabel>Day 03 kWh</ControlPageLabel>
+            </State>
+            <State id="day04cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 04 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 04 £</ControlPageLabel>
+            </State>
+            <State id="day04kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 04 kWh</TriggerLabel>
+                <ControlPageLabel>Day 04 kWh</ControlPageLabel>
+            </State>
+            <State id="day05cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 05 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 05 £</ControlPageLabel>
+            </State>
+            <State id="day05kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 05 kWh</TriggerLabel>
+                <ControlPageLabel>Day 05 kWh</ControlPageLabel>
+            </State>
+            <State id="day06cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 06 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 06 £</ControlPageLabel>
+            </State>
+            <State id="day06kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 06 kWh</TriggerLabel>
+                <ControlPageLabel>Day 06 kWh</ControlPageLabel>
+            </State>
+            <State id="day07cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 07 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 07 £</ControlPageLabel>
+            </State>
+            <State id="day07kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 07 kWh</TriggerLabel>
+                <ControlPageLabel>Day 07 kWh</ControlPageLabel>
+            </State>
+            <State id="day08cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 08 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 08 £</ControlPageLabel>
+            </State>
+            <State id="day08kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 08 kWh</TriggerLabel>
+                <ControlPageLabel>Day 08 kWh</ControlPageLabel>
+            </State>
+            <State id="day09cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 09 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 09 £</ControlPageLabel>
+            </State>
+            <State id="day09kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 09 kWh</TriggerLabel>
+                <ControlPageLabel>Day 09 kWh</ControlPageLabel>
+            </State>
+            <State id="day10cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 10 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 10 £</ControlPageLabel>
+            </State>
+            <State id="day10kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 10 kWh</TriggerLabel>
+                <ControlPageLabel>Day 10 kWh</ControlPageLabel>
+            </State>
+            <State id="day11cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 11 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 11 £</ControlPageLabel>
+            </State>
+            <State id="day11kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 11 kWh</TriggerLabel>
+                <ControlPageLabel>Day 11 kWh</ControlPageLabel>
+            </State>
+            <State id="day12cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 12 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 12 £</ControlPageLabel>
+            </State>
+            <State id="day12kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 12 kWh</TriggerLabel>
+                <ControlPageLabel>Day 12 kWh</ControlPageLabel>
+            </State>
+            <State id="day13cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 13 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 13 £</ControlPageLabel>
+            </State>
+            <State id="day13kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 13 kWh</TriggerLabel>
+                <ControlPageLabel>Day 13 kWh</ControlPageLabel>
+            </State>
+            <State id="day14cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 14 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 14 £</ControlPageLabel>
+            </State>
+            <State id="day14kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 14 kWh</TriggerLabel>
+                <ControlPageLabel>Day 14 kWh</ControlPageLabel>
+            </State>
+            <State id="day15cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 15 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 15 £</ControlPageLabel>
+            </State>
+            <State id="day15kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 15 kWh</TriggerLabel>
+                <ControlPageLabel>Day 15 kWh</ControlPageLabel>
+            </State>
+            <State id="day16cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 16 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 16 £</ControlPageLabel>
+            </State>
+            <State id="day16kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 16 kWh</TriggerLabel>
+                <ControlPageLabel>Day 16 kWh</ControlPageLabel>
+            </State>
+            <State id="day17cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 17 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 17 £</ControlPageLabel>
+            </State>
+            <State id="day17kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 17 kWh</TriggerLabel>
+                <ControlPageLabel>Day 17 kWh</ControlPageLabel>
+            </State>
+            <State id="day18cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 18 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 18 £</ControlPageLabel>
+            </State>
+            <State id="day18kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 18 kWh</TriggerLabel>
+                <ControlPageLabel>Day 18 kWh</ControlPageLabel>
+            </State>
+            <State id="day19cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 19 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 19 £</ControlPageLabel>
+            </State>
+            <State id="day19kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 19 kWh</TriggerLabel>
+                <ControlPageLabel>Day 19 kWh</ControlPageLabel>
+            </State>
+            <State id="day20cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 20 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 20 £</ControlPageLabel>
+            </State>
+            <State id="day20kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 20 kWh</TriggerLabel>
+                <ControlPageLabel>Day 20 kWh</ControlPageLabel>
+            </State>
+            <State id="day21cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 21 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 21 £</ControlPageLabel>
+            </State>
+            <State id="day21kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 21 kWh</TriggerLabel>
+                <ControlPageLabel>Day 21 kWh</ControlPageLabel>
+            </State>
+            <State id="day22cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 22 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 22 £</ControlPageLabel>
+            </State>
+            <State id="day22kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 22 kWh</TriggerLabel>
+                <ControlPageLabel>Day 22 kWh</ControlPageLabel>
+            </State>
+            <State id="day23cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 23 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 23 £</ControlPageLabel>
+            </State>
+            <State id="day23kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 23 kWh</TriggerLabel>
+                <ControlPageLabel>Day 23 kWh</ControlPageLabel>
+            </State>
+            <State id="day24cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 24 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 24 £</ControlPageLabel>
+            </State>
+            <State id="day24kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 24 kWh</TriggerLabel>
+                <ControlPageLabel>Day 24 kWh</ControlPageLabel>
+            </State>
+            <State id="day25cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 25 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 25 £</ControlPageLabel>
+            </State>
+            <State id="day25kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 25 kWh</TriggerLabel>
+                <ControlPageLabel>Day 25 kWh</ControlPageLabel>
+            </State>
+            <State id="day26cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 26 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 26 £</ControlPageLabel>
+            </State>
+            <State id="day26kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 26 kWh</TriggerLabel>
+                <ControlPageLabel>Day 26 kWh</ControlPageLabel>
+            </State>
+            <State id="day27cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 27 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 27 £</ControlPageLabel>
+            </State>
+            <State id="day27kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 27 kWh</TriggerLabel>
+                <ControlPageLabel>Day 27 kWh</ControlPageLabel>
+            </State>
+            <State id="day28cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 28 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 28 £</ControlPageLabel>
+            </State>
+            <State id="day28kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 28 kWh</TriggerLabel>
+                <ControlPageLabel>Day 28 kWh</ControlPageLabel>
+            </State>
+            <State id="day29cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 29 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 29 £</ControlPageLabel>
+            </State>
+            <State id="day29kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 29 kWh</TriggerLabel>
+                <ControlPageLabel>Day 29 kWh</ControlPageLabel>
+            </State>
+            <State id="day30cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 30 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 30 £</ControlPageLabel>
+            </State>
+            <State id="day30kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 30 kWh</TriggerLabel>
+                <ControlPageLabel>Day 30 kWh</ControlPageLabel>
+            </State>
+            <State id="day31cost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 31 Earnings</TriggerLabel>
+                <ControlPageLabel>Day 31 £</ControlPageLabel>
+            </State>
+            <State id="day31kWh">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day 31 kWh</TriggerLabel>
+                <ControlPageLabel>Day 31 kWh</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>totalCost</UiDisplayStateId>
+    </Device>
+</Devices>

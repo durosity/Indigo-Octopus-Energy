@@ -1,0 +1,261 @@
+<?xml version="1.0"?>
+<Events>
+    <!-- Cheap Period Start - CRITICAL for EV charging -->
+    <Event id="cheapPeriodStart">
+        <Name>Cheap Rate Period Starting</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when an electricity meter enters a cheap rate period (rate below configured threshold).</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Cheap Rate Period Starting</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Cheap Period End -->
+    <Event id="cheapPeriodEnd">
+        <Name>Cheap Rate Period Ending</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when an electricity meter leaves a cheap rate period.</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Cheap Rate Period Ending</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Rate Change -->
+    <Event id="rateChanged">
+        <Name>Rate Changed</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when the electricity rate changes significantly (more than 0.5p/kWh).</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Rate Changed</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Rate Below Threshold -->
+    <Event id="rateBelowThreshold">
+        <Name>Rate Below Specific Value</Name>
+        <ConfigUI>
+            <Field id="deviceId" type="menu">
+                <Label>Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter"/>
+            </Field>
+            <Field id="thresholdRate" type="textfield" defaultValue="10.0">
+                <Label>Threshold Rate (p/kWh):</Label>
+                <Description>Trigger when rate goes below this value</Description>
+            </Field>
+            <Field id="deviceLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Useful for dynamic EV charging based on specific rate targets.</Label>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Rate Below %%thresholdRate%% p/kWh</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Rate Above Threshold -->
+    <Event id="rateAboveThreshold">
+        <Name>Rate Above Specific Value</Name>
+        <ConfigUI>
+            <Field id="deviceId" type="menu">
+                <Label>Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter"/>
+            </Field>
+            <Field id="thresholdRate" type="textfield" defaultValue="20.0">
+                <Label>Threshold Rate (p/kWh):</Label>
+                <Description>Trigger when rate goes above this value</Description>
+            </Field>
+            <Field id="deviceLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Useful for pausing non-essential loads during expensive periods.</Label>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Rate Above %%thresholdRate%% p/kWh</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- High Consumption Warning -->
+    <Event id="highConsumption">
+        <Name>High Consumption Detected</Name>
+        <ConfigUI>
+            <Field id="deviceId" type="menu">
+                <Label>Meter Device:</Label>
+                <List class="self"/>
+            </Field>
+            <Field id="thresholdKwh" type="textfield" defaultValue="50.0">
+                <Label>Threshold (kWh):</Label>
+                <Description>Trigger when today's consumption exceeds this value</Description>
+            </Field>
+            <Field id="deviceLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Get notified if daily consumption is unusually high. Fires once per day.</Label>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Consumption Above %%thresholdKwh%% kWh Today</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Negative Rate Detected (Free Electricity) -->
+    <Event id="negativeRate">
+        <Name>Negative Rate (Free Electricity)</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when the electricity rate goes negative (you get paid to use electricity). Rare but happens on Agile during very high wind/solar generation.</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Negative Rate Detected</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Rate Period Changed (Economy 7 Day/Night) -->
+    <Event id="periodChange">
+        <Name>Rate Period Changed</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when a dual-rate tariff (Economy 7, etc.) switches between Day and Night periods.</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Electricity Meter:</Label>
+                <List class="self" filter="electricityMeter"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Rate Period Changed</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Tariff Changed -->
+    <Event id="tariffChanged">
+        <Name>Tariff Changed</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when a meter's tariff changes (e.g., switching from one product to another, or when an agreement expires and a new one starts).</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Meter Device:</Label>
+                <List class="self"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Tariff Changed</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Tariff Ending Soon -->
+    <Event id="tariffEndingSoon">
+        <Name>Tariff Ending Soon</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when a meter's tariff is ending within 30 days. Perfect for reminders to review and switch tariffs.</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Meter Device:</Label>
+                <List class="self"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Tariff Ending Soon</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Saving Session Starting -->
+    <Event id="savingSessionStarting">
+        <Name>Saving Session Starting</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when a Saving Session (free electricity event) is about to start. Perfect for automation to reduce consumption during the session.</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Account Device:</Label>
+                <List class="self" filter="accountDevice"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Saving Session Starting</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- Saving Session Ending -->
+    <Event id="savingSessionEnding">
+        <Name>Saving Session Ending</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when a Saving Session is ending. Use this to resume normal consumption patterns.</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Account Device:</Label>
+                <List class="self" filter="accountDevice"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>Saving Session Ending</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+
+    <!-- New Saving Session Announced -->
+    <Event id="newSavingSession">
+        <Name>New Saving Session Announced</Name>
+        <ConfigUI>
+            <Field id="deviceLabel" type="label">
+                <Label>This trigger fires when a new Saving Session is announced for your account. Use this for advance notifications.</Label>
+            </Field>
+            <Field id="deviceId" type="menu">
+                <Label>Account Device:</Label>
+                <List class="self" filter="accountDevice"/>
+            </Field>
+            <Field id="description" type="textfield" readonly="true" hidden="true">
+                <Label/>
+            </Field>
+        </ConfigUI>
+        <TriggerLabel>New Saving Session Announced</TriggerLabel>
+        <TriggerLabelPrefix>Octopus: </TriggerLabelPrefix>
+    </Event>
+</Events>

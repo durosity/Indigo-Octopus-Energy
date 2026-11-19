@@ -1,0 +1,543 @@
+<?xml version="1.0"?>
+<Devices>
+    <!-- Account Device -->
+    <Device type="custom" id="accountDevice">
+        <Name>Octopus Account</Name>
+        <ConfigUI>
+            <Field id="instructionsLabel1" type="label" fontSize="regular">
+                <Label>STEP 1: Discover or Enter Your Account Number</Label>
+            </Field>
+            
+            <Field id="discoverButton" type="button">
+                <Label/>
+                <Title>Auto-Discover Account (may fail with 403)</Title>
+                <CallbackMethod>discoverAccount</CallbackMethod>
+            </Field>
+            
+            <Field id="accountNumber" type="textfield">
+                <Label>Account Number:</Label>
+                <Description>Auto-filled or enter manually (format: A-XXXXXXXX)</Description>
+            </Field>
+            
+            <Field id="helpLabel1" type="label" fontSize="small" alignWithControl="true">
+                <Label>If auto-discovery fails with 403 error, find your account number at https://octopus.energy/dashboard/ and enter it above.</Label>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="instructionsLabel2" type="label" fontSize="regular">
+                <Label>STEP 2: Create Your Meter Devices</Label>
+            </Field>
+            
+            <Field id="cheapRateThreshold" type="textfield" defaultValue="10.0">
+                <Label>Default Cheap Rate Threshold (p/kWh):</Label>
+                <Description>For EV charging triggers (Agile: 10-12p, Go: 7.5-8p)</Description>
+            </Field>
+            
+            <Field id="createMetersButton" type="button">
+                <Label/>
+                <Title>Discover &amp; Create All Meters</Title>
+                <CallbackMethod>discoverAndCreateMetersButton</CallbackMethod>
+            </Field>
+            
+            <Field id="helpLabel2" type="label" fontSize="small" alignWithControl="true">
+                <Label>This will automatically create all your meter devices (electricity, gas, export) with MPANs, serial numbers, product codes, and tariff codes pre-filled. Existing meters won't be duplicated.</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="accountNumber">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Account Number</TriggerLabel>
+                <ControlPageLabel>Account</ControlPageLabel>
+            </State>
+            <State id="accountBalance">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Account Balance</TriggerLabel>
+                <ControlPageLabel>Balance</ControlPageLabel>
+            </State>
+            <State id="paymentMethod">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Payment Method</TriggerLabel>
+                <ControlPageLabel>Payment</ControlPageLabel>
+            </State>
+            <State id="nextPaymentDate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Next Payment Date</TriggerLabel>
+                <ControlPageLabel>Next Payment</ControlPageLabel>
+            </State>
+            <State id="nextPaymentAmount">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Next Payment Amount</TriggerLabel>
+                <ControlPageLabel>Payment Amount</ControlPageLabel>
+            </State>
+            <State id="meterCount">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Meter Count</TriggerLabel>
+                <ControlPageLabel>Meters</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>accountBalance</UiDisplayStateId>
+    </Device>
+
+    <!-- Electricity Meter Device -->
+    <Device type="custom" id="electricityMeter">
+        <Name>Electricity Meter</Name>
+        <ConfigUI>
+            <Field id="autoCreatedLabel" type="label" fontSize="small" alwaysUseInDialogHeightCalc="true" visibleBindingId="autoCreated" visibleBindingValue="true">
+                <Label>This device was automatically created with details from your Octopus account. All fields have been populated from the API.</Label>
+            </Field>
+            
+            <Field id="mpanMprn" type="textfield">
+                <Label>MPAN:</Label>
+                <Description>Meter Point Administration Number (13 digits)</Description>
+            </Field>
+            <Field id="serialNumber" type="textfield">
+                <Label>Serial Number:</Label>
+                <Description>Your electricity meter serial number</Description>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="productCode" type="textfield">
+                <Label>Product Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffCode" type="textfield">
+                <Label>Tariff Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>These codes are automatically populated from your Octopus account.</Label>
+            </Field>
+            
+            <Field id="separator2" type="separator"/>
+            
+            <Field id="cheapRateThreshold" type="textfield" defaultValue="10.0">
+                <Label>Cheap Rate Threshold (p/kWh):</Label>
+                <Description>Rates below this trigger "cheap period" events for EV charging</Description>
+            </Field>
+            <Field id="thresholdHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Set this to your preferred rate for EV charging. Typical values: 5-15p/kWh for Agile, 7.5p for Intelligent Go.</Label>
+            </Field>
+            
+            <Field id="autoCreated" type="checkbox" hidden="true" defaultValue="false">
+                <Label>Auto Created</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="currentRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Rate</TriggerLabel>
+                <ControlPageLabel>Rate</ControlPageLabel>
+            </State>
+            <State id="nextRateChange">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Next Rate Change</TriggerLabel>
+                <ControlPageLabel>Next Change</ControlPageLabel>
+            </State>
+            <State id="nextRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Next Rate</TriggerLabel>
+                <ControlPageLabel>Next Rate</ControlPageLabel>
+            </State>
+            <State id="inCheapPeriod">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>In Cheap Period</TriggerLabel>
+                <ControlPageLabel>Cheap Period</ControlPageLabel>
+            </State>
+            <State id="cheapPeriodStart">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Cheap Period Start</TriggerLabel>
+                <ControlPageLabel>Cheap Start</ControlPageLabel>
+            </State>
+            <State id="cheapPeriodEnd">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Cheap Period End</TriggerLabel>
+                <ControlPageLabel>Cheap End</ControlPageLabel>
+            </State>
+            <State id="isDualRate">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Is Dual Rate Tariff</TriggerLabel>
+                <ControlPageLabel>Dual Rate</ControlPageLabel>
+            </State>
+            <State id="currentPeriod">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Current Period</TriggerLabel>
+                <ControlPageLabel>Period</ControlPageLabel>
+            </State>
+            <State id="dayRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Day Rate</TriggerLabel>
+                <ControlPageLabel>Day Rate</ControlPageLabel>
+            </State>
+            <State id="nightRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Night Rate</TriggerLabel>
+                <ControlPageLabel>Night Rate</ControlPageLabel>
+            </State>
+            <State id="isNegativeRate">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Is Negative Rate</TriggerLabel>
+                <ControlPageLabel>Negative Rate</ControlPageLabel>
+            </State>
+            <State id="currentConsumption">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Consumption</TriggerLabel>
+                <ControlPageLabel>Current</ControlPageLabel>
+            </State>
+            <State id="costToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today</TriggerLabel>
+                <ControlPageLabel>Cost Today</ControlPageLabel>
+            </State>
+            <State id="kWhToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Today</TriggerLabel>
+                <ControlPageLabel>kWh Today</ControlPageLabel>
+            </State>
+            <State id="costYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday</TriggerLabel>
+                <ControlPageLabel>Cost Yesterday</ControlPageLabel>
+            </State>
+            <State id="kWhYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Yesterday</TriggerLabel>
+                <ControlPageLabel>kWh Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date</TriggerLabel>
+                <ControlPageLabel>Cost MTD</ControlPageLabel>
+            </State>
+            <State id="costTodayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Today</ControlPageLabel>
+            </State>
+            <State id="costYesterdayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDateWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total MTD</ControlPageLabel>
+            </State>
+            <State id="kWhMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Month To Date</TriggerLabel>
+                <ControlPageLabel>kWh MTD</ControlPageLabel>
+            </State>
+            <State id="todayTotal">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Total (Legacy)</TriggerLabel>
+                <ControlPageLabel>Today</ControlPageLabel>
+            </State>
+            <State id="todayCost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Cost (Legacy)</TriggerLabel>
+                <ControlPageLabel>Cost</ControlPageLabel>
+            </State>
+            <State id="standingCharge">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Standing Charge</TriggerLabel>
+                <ControlPageLabel>Standing</ControlPageLabel>
+            </State>
+            <State id="currentTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Current Tariff</TriggerLabel>
+                <ControlPageLabel>Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffValidFrom">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid From</TriggerLabel>
+                <ControlPageLabel>Valid From</ControlPageLabel>
+            </State>
+            <State id="tariffValidTo">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid To</TriggerLabel>
+                <ControlPageLabel>Valid To</ControlPageLabel>
+            </State>
+            <State id="tariffEndingSoon">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Ending Soon</TriggerLabel>
+                <ControlPageLabel>Ending Soon</ControlPageLabel>
+            </State>
+            <State id="upcomingTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Upcoming Tariff</TriggerLabel>
+                <ControlPageLabel>Next Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffChanged">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Changed</TriggerLabel>
+                <ControlPageLabel>Changed</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>costYesterdayWithStanding</UiDisplayStateId>
+    </Device>
+
+    <!-- Gas Meter Device -->
+    <Device type="custom" id="gasMeter">
+        <Name>Gas Meter</Name>
+        <ConfigUI>
+            <Field id="autoCreatedLabel" type="label" fontSize="small" alwaysUseInDialogHeightCalc="true" visibleBindingId="autoCreated" visibleBindingValue="true">
+                <Label>This device was automatically created with details from your Octopus account.</Label>
+            </Field>
+            
+            <Field id="mpanMprn" type="textfield">
+                <Label>MPRN:</Label>
+                <Description>Meter Point Reference Number</Description>
+            </Field>
+            <Field id="serialNumber" type="textfield">
+                <Label>Serial Number:</Label>
+                <Description>Your gas meter serial number</Description>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="productCode" type="textfield">
+                <Label>Product Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffCode" type="textfield">
+                <Label>Tariff Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            
+            <Field id="separator2" type="separator"/>
+            
+            <Field id="meterType" type="menu" defaultValue="auto">
+                <Label>Meter Type:</Label>
+                <List>
+                    <Option value="auto">Auto-Detect (Recommended)</Option>
+                    <Option value="smets1">SMETS1 (Data in kWh)</Option>
+                    <Option value="smets2">SMETS2 (Data in m³)</Option>
+                </List>
+            </Field>
+            
+            <Field id="calorificValue" type="textfield" defaultValue="40.0">
+                <Label>Calorific Value:</Label>
+                <Description>For SMETS2 meters - find on your bill (typically 38-40 MJ/m³)</Description>
+            </Field>
+            
+            <Field id="gasHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>SMETS1 meters report in kWh, SMETS2 in m³. Auto-detect will determine this automatically. Only change if you see incorrect gas consumption values.</Label>
+            </Field>
+            
+            <Field id="autoCreated" type="checkbox" hidden="true" defaultValue="false">
+                <Label>Auto Created</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="meterTypeDetected">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Meter Type Detected</TriggerLabel>
+                <ControlPageLabel>Meter Type</ControlPageLabel>
+            </State>
+            <State id="currentRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Rate</TriggerLabel>
+                <ControlPageLabel>Rate</ControlPageLabel>
+            </State>
+            <State id="currentConsumption">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Consumption</TriggerLabel>
+                <ControlPageLabel>Current</ControlPageLabel>
+            </State>
+            <State id="costToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today</TriggerLabel>
+                <ControlPageLabel>Cost Today</ControlPageLabel>
+            </State>
+            <State id="kWhToday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Today</TriggerLabel>
+                <ControlPageLabel>kWh Today</ControlPageLabel>
+            </State>
+            <State id="costYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday</TriggerLabel>
+                <ControlPageLabel>Cost Yesterday</ControlPageLabel>
+            </State>
+            <State id="kWhYesterday">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Yesterday</TriggerLabel>
+                <ControlPageLabel>kWh Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date</TriggerLabel>
+                <ControlPageLabel>Cost MTD</ControlPageLabel>
+            </State>
+            <State id="costTodayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Today (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Today</ControlPageLabel>
+            </State>
+            <State id="costYesterdayWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Yesterday (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total Yesterday</ControlPageLabel>
+            </State>
+            <State id="costMonthToDateWithStanding">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Cost Month To Date (Inc Standing Charge)</TriggerLabel>
+                <ControlPageLabel>Total MTD</ControlPageLabel>
+            </State>
+            <State id="kWhMonthToDate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>kWh Month To Date</TriggerLabel>
+                <ControlPageLabel>kWh MTD</ControlPageLabel>
+            </State>
+            <State id="todayTotal">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Total (Legacy)</TriggerLabel>
+                <ControlPageLabel>Today</ControlPageLabel>
+            </State>
+            <State id="todayCost">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Cost (Legacy)</TriggerLabel>
+                <ControlPageLabel>Cost</ControlPageLabel>
+            </State>
+            <State id="standingCharge">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Standing Charge</TriggerLabel>
+                <ControlPageLabel>Standing</ControlPageLabel>
+            </State>
+            <State id="currentTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Current Tariff</TriggerLabel>
+                <ControlPageLabel>Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffValidFrom">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid From</TriggerLabel>
+                <ControlPageLabel>Valid From</ControlPageLabel>
+            </State>
+            <State id="tariffValidTo">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Tariff Valid To</TriggerLabel>
+                <ControlPageLabel>Valid To</ControlPageLabel>
+            </State>
+            <State id="tariffEndingSoon">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Ending Soon</TriggerLabel>
+                <ControlPageLabel>Ending Soon</ControlPageLabel>
+            </State>
+            <State id="upcomingTariff">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Upcoming Tariff</TriggerLabel>
+                <ControlPageLabel>Next Tariff</ControlPageLabel>
+            </State>
+            <State id="tariffChanged">
+                <ValueType>Boolean</ValueType>
+                <TriggerLabel>Tariff Changed</TriggerLabel>
+                <ControlPageLabel>Changed</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>costYesterdayWithStanding</UiDisplayStateId>
+    </Device>
+
+    <!-- Export Meter Device (for future solar) -->
+    <Device type="custom" id="exportMeter">
+        <Name>Export Meter</Name>
+        <ConfigUI>
+            <Field id="autoCreatedLabel" type="label" fontSize="small" alwaysUseInDialogHeightCalc="true" visibleBindingId="autoCreated" visibleBindingValue="true">
+                <Label>This device was automatically created for solar export tracking.</Label>
+            </Field>
+            
+            <Field id="mpanMprn" type="textfield">
+                <Label>Export MPAN:</Label>
+                <Description>Meter Point Administration Number for export</Description>
+            </Field>
+            <Field id="serialNumber" type="textfield">
+                <Label>Serial Number:</Label>
+                <Description>Your export meter serial number</Description>
+            </Field>
+            
+            <Field id="separator1" type="separator"/>
+            
+            <Field id="productCode" type="textfield">
+                <Label>Product Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="tariffCode" type="textfield">
+                <Label>Tariff Code:</Label>
+                <Description>Auto-populated from your tariff</Description>
+            </Field>
+            <Field id="exportHelpLabel" type="label" fontSize="small" alignWithControl="true">
+                <Label>Export meters have different MPANs than import meters.</Label>
+            </Field>
+            
+            <Field id="autoCreated" type="checkbox" hidden="true" defaultValue="false">
+                <Label>Auto Created</Label>
+            </Field>
+        </ConfigUI>
+        <States>
+            <State id="status">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Status</TriggerLabel>
+                <ControlPageLabel>Status</ControlPageLabel>
+            </State>
+            <State id="currentRate">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Export Rate</TriggerLabel>
+                <ControlPageLabel>Rate</ControlPageLabel>
+            </State>
+            <State id="currentExport">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Current Export</TriggerLabel>
+                <ControlPageLabel>Current</ControlPageLabel>
+            </State>
+            <State id="todayTotal">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Export</TriggerLabel>
+                <ControlPageLabel>Today</ControlPageLabel>
+            </State>
+            <State id="todayEarnings">
+                <ValueType>Number</ValueType>
+                <TriggerLabel>Today's Earnings</TriggerLabel>
+                <ControlPageLabel>Earnings</ControlPageLabel>
+            </State>
+            <State id="lastUpdate">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Last Update</TriggerLabel>
+                <ControlPageLabel>Updated</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>currentRate</UiDisplayStateId>
+    </Device>
+</Devices>
